@@ -113,3 +113,11 @@ def construct_intended_action(policy0, policy1, time_step):
   new_action = tf.convert_to_tensor(np.array([[action0[0], action1[0]]], dtype=np.float32))
   return new_action
 
+def construct_fixed_action(policy0, action1, time_step):
+  action_step0 = policy0.action(time_step) 
+
+  action0 = action_step0.action.numpy()[0]
+
+  new_action = tf.convert_to_tensor(np.array([[action0[0], action1]], dtype=np.float32))
+  return new_action
+
