@@ -13,10 +13,9 @@ class PublicGoodsEnv(py_environment.PyEnvironment):
     self._action_spec = array_spec.BoundedArraySpec(
         shape=(2,), dtype=np.float32, minimum=0, maximum = 1, name='action')
     self._observation_spec = array_spec.BoundedArraySpec(
-        shape=(12,4), dtype=np.float32, minimum=0, name='observation')
-    s = np.zeros((12, 4))
-    s[0] = [10, 10, 0, 0]
-    s[1] = [10, 10, 0, 0]
+        shape=(12,2), dtype=np.float32, minimum=0, name='observation')
+    s = np.zeros((12, 2))
+    s[11] = [1,1]
     self._state = s
     self._episode_ended = False
     self._counter = 0
@@ -31,9 +30,8 @@ class PublicGoodsEnv(py_environment.PyEnvironment):
     return self._observation_spec
 
   def _reset(self):
-    s = np.zeros((12, 4))
-    s[0] = [10, 10, 0, 0]
-    s[1] = [10, 10, 0, 0]
+    s = np.zeros((12, 2))
+    s[11] = [1,1]
     self._state = s
     self._episode_ended = False
     self._counter = 0
@@ -48,23 +46,23 @@ class PublicGoodsEnv(py_environment.PyEnvironment):
       # a new episode.
       return self.reset()
     
-    self._state[self._counter - 1, 2] = action[0]
-    self._state[self._counter - 1, 3] = action[1]
+    self._state[self._counter - 1, 0] = action[0]
+    self._state[self._counter - 1, 1] = action[1]
 
     # Make sure episodes don't go on forever.
     if self._counter > self._END:
       self._episode_ended = True
 
-    s1 = self._state[self._counter - 1, 0]
-    a1 = self._state[self._counter - 1, 2] * s1
-    s2 = self._state[self._counter - 1, 1]
-    a2 = self._state[self._counter - 1, 3] * s2
-    self._state[self._counter, 0] = s1 - a1 + (a1 + a2)*self._MULT / 2
-    self._state[self._counter, 1] = s2 - a2 + (a1 + a2)*self._MULT / 2
+    s1 = self._state[11, 0]
+    a1 = self._state[self._counter - 1, 0] * s1
+    s2 = self._state[11, 1]
+    a2 = self._state[self._counter - 1, 1] * s2
+    self._state[11, 0] = s1 - a1 + (a1 + a2)*self._MULT / 2
+    self._state[11, 1] = s2 - a2 + (a1 + a2)*self._MULT / 2
 
     if self._episode_ended:
-      reward_self = self._state[self._counter, 0] - self._state[self._counter - 1, 0]
-      reward_other = self._state[self._counter, 1] - self._state[self._counter - 1, 1]
+      reward_self = (self._state[11, 0] - s1)/s1
+      reward_other = (self._state[11, 1] - s2)/s2
       my_reward = reward_fun(reward_self, reward_other)
 
       ret = ts.termination(np.array(self._state, dtype=np.float32), my_reward)
@@ -72,8 +70,8 @@ class PublicGoodsEnv(py_environment.PyEnvironment):
 
       return ret
     else:
-      reward_self = self._state[self._counter, 0] - self._state[self._counter - 1, 0]
-      reward_other = self._state[self._counter, 1] - self._state[self._counter - 1, 1]
+      reward_self = (self._state[11, 0] - s1)/s1
+      reward_other = (self._state[11, 1] - s2)/s2
       my_reward = reward_fun(reward_self, reward_other)
       ret = ts.transition(
           np.array(self._state, dtype=np.float32), reward=my_reward, discount=1.0)
@@ -91,8 +89,8 @@ def construct_intended_action(policy0, policy1, time_step):
   r, _ = np.shape(obs)
   for i in range(r):
     my_obs = obs[i]
-    obs[i] = [my_obs[1], my_obs[0], my_obs[3], my_obs[2]]
-  obs = tf.constant(np.array(obs, dtype=np.float32), shape=(1, 12,4), name="observation")
+    obs[i] = [my_obs[1], my_obs[0]]
+  obs = tf.constant(np.array(obs, dtype=np.float32), shape=(1, 12,2), name="observation")
 
   step_type = time_step.step_type.numpy()[0]
   step_type = tf.constant(step_type, dtype=tf.int32, shape=(1,), name="step_type")      
