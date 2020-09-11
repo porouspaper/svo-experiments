@@ -111,6 +111,35 @@ def construct_intended_action(policy0, policy1, time_step):
   new_action = tf.convert_to_tensor(np.array([[action0[0], action1[0]]], dtype=np.float32))
   return new_action, action_step0.state, action_step0.info
 
+def construct_intended_action_squashed_shape(policy0, policy1, time_step):
+  action_step0 = policy0.action(time_step) 
+
+  obs = time_step.observation.numpy()[0]
+  r, _ = np.shape(obs)
+  for i in range(r):
+    my_obs = obs[i]
+    obs[i] = [my_obs[1], my_obs[0]]
+  obs = tf.constant(np.array(obs, dtype=np.float32), shape=(12,2), name="observation")
+
+  step_type = time_step.step_type.numpy()[0]
+  step_type = tf.constant(step_type, dtype=tf.int32, shape=(), name="step_type")      
+
+  reward = time_step.reward.numpy()[0]
+  reward = tf.constant(reward, dtype=tf.float32, shape=(), name="reward")    
+
+  discount = time_step.discount.numpy()[0]
+  discount = tf.constant(discount, dtype=tf.float32, shape=(), name="discount")
+
+  time_step = ts.TimeStep(step_type, reward, discount, obs)
+  #print("time step edited", time_step)
+  action_step1 = policy1.action(time_step)
+
+  action0 = action_step0.action.numpy()[0]
+  action1 = action_step1.action.numpy()
+
+  new_action = tf.convert_to_tensor(np.array([[action0[0], action1[0]]], dtype=np.float32))
+  return new_action, action_step0.state, action_step0.info
+
 def construct_fixed_action(policy0, action1, time_step):
   action_step0 = policy0.action(time_step) 
 
